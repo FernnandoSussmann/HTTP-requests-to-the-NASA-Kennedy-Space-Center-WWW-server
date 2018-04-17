@@ -7,19 +7,27 @@ def load_file(sc,file_path):
 
 def organize_data_into_dataframe(data_rdd):
     from datetime import datetime
-    return data_rdd.map(lambda line: line.split(" ")) \
+    return data_rdd.map(lambda line: line.replace(' -', '')) \
+            .map(lambda line: line.replace('  ', ' ')) \
+            .map(lambda line: line.split(" ")) \
             .map(lambda c: Row(host=c[0], 
-            timestamp=datetime.strptime(str(c[3].replace('[','')), '%d/%b/%Y:%H:%M:%S'), 
-            request=str(c[5]+c[6]).replace('"',''),
-            HTTPcode=int(c[8]), 
-            totalBytes=int(str(c[9]).replace('-','0')))).toDF()
+            timestamp=datetime.strptime(str(c[1]).replace('[','').replace(']','')[:-4], "%d/%b/%Y:%H:%M:%S"), 
+            request=c[2]+c[3],
+            HTTPcode=c[-2], 
+            totalBytes=c[-1])).toDF()
 
 def data_frame_debug(df):
     df.printSchema() 
     df.show() 
 
+def distinct_hosts(spark):
+    query = """
+    SELECT DISTINCT HOST
+    FROM logs_table
+    """
+    return spark.sql(query)
+
 def main():
-    # from datetime import datetime
     sc = SparkContext()
     spark = SparkSession(sc)
 
@@ -31,5 +39,16 @@ def main():
 
     data_frame_debug(log_aug95_DF)
     data_frame_debug(log_jul95_DF)
+
+    all_logs_df = log_aug95_DF.union(log_jul95_DF)
+    all_logs_df.registerTempTable("logs_table")
+    all_logs_df.collect()
+    # all_logs_df.cache()
+
+    data_frame_debug(all_logs_df)
+
+    unique_hosts_df = distinct_hosts(spark)
+
+    data_frame_debug(unique_hosts_df)
 
 main()
