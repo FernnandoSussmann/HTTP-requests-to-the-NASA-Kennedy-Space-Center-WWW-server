@@ -91,7 +91,7 @@ def main():
     http_count_top_url_df = error_404_count_top_url(spark)
     http_count_top_url_df.collect()
 
-    data_frame_debug(http_count_by_host_df)
+    data_frame_debug(http_count_top_url_df)
 
     http_count_by_host_df = error_404_count_by_day(spark)
     http_count_by_host_df.collect()
