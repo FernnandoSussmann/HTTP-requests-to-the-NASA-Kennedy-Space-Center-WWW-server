@@ -9,8 +9,9 @@ def organize_data_into_dataframe(data_rdd):
     from datetime import datetime
     return data_rdd.map(lambda line: line.split(" ")) \
             .map(lambda c: Row(host=c[0], 
-            timestamp=datetime.strptime(str(c[3]).replace('[',''), "%d/%b/%Y:%H:%M:%S"), 
-            request=c[5]+c[6],
+            timestamp=datetime.strptime(str(c[3]).replace('[',''), "%d/%b/%Y:%H:%M:%S"),
+            requestMethod=c[5].encode('utf-8').replace('"',''),
+            request=c[6].encode('utf-8').replace('"',''),
             HTTPcode=c[-2], 
             totalBytes=c[-1])).toDF()
 
@@ -20,7 +21,7 @@ def data_frame_debug(df):
 
 def distinct_hosts(spark):
     query = """
-    SELECT DISTINCT HOST
+    SELECT DISTINCT Host
     FROM logs_table
     """
     return spark.sql(query)
@@ -30,6 +31,18 @@ def error_404_count(spark):
     SELECT count(HTTPcode) as PagesNotFound
     FROM logs_table
     WHERE HTTPcode = '404'
+    """
+
+    return spark.sql(query)
+
+def error_404_count_by_host(spark):
+    query = """
+    SELECT concat(Host, Request) as URL,
+           count(HTTPcode) as PagesNotFound
+    FROM logs_table
+    WHERE HTTPcode = '404'
+    GROUP BY URL
+    ORDER BY PagesNotFound DESC LIMIT 5
     """
 
     return spark.sql(query)
@@ -55,13 +68,18 @@ def main():
     data_frame_debug(all_logs_df)
 
     unique_hosts_df = distinct_hosts(spark)
-    # unique_hosts_df.collect()
+    unique_hosts_df.collect()
 
     data_frame_debug(unique_hosts_df)
 
     http_count_df = error_404_count(spark)
-    # http_count_df.collect()
+    http_count_df.collect()
 
     data_frame_debug(http_count_df)
+
+    http_count_by_host_df = error_404_count_by_host(spark)
+    http_count_by_host_df.collect()
+
+    data_frame_debug(http_count_by_host_df)
 
 main()
