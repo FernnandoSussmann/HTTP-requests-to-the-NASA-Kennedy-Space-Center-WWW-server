@@ -13,7 +13,7 @@ def organize_data_into_dataframe(data_rdd):
             requestMethod=c[5].encode('utf-8').replace('"',''),
             request=c[6].encode('utf-8').replace('"',''),
             HTTPcode=c[-2], 
-            totalBytes=c[-1])).toDF()
+            totalBytes=int(c[-1].encode('utf-8').replace('-', '0')))).toDF()
 
 def data_frame_debug(df):
     df.printSchema() 
@@ -58,6 +58,14 @@ def error_404_count_by_day(spark):
 
     return spark.sql(query)
 
+def get_total_bytes(spark):
+    query = """
+    SELECT sum(totalBytes)
+    FROM logs_table
+    """
+
+    return spark.sql(query)
+
 def main():
     sc = SparkContext()
     spark = SparkSession(sc)
@@ -73,8 +81,6 @@ def main():
 
     all_logs_df = log_aug95_DF.union(log_jul95_DF)
     all_logs_df.registerTempTable("logs_table")
-    # all_logs_df.collect()
-    # all_logs_df.cache()
 
     data_frame_debug(all_logs_df)
 
@@ -97,5 +103,10 @@ def main():
     http_count_by_host_df.collect()
 
     data_frame_debug(http_count_by_host_df)
+
+    total_bytes_df = get_total_bytes(spark)
+    total_bytes_df.collect()
+
+    data_frame_debug(total_bytes_df)    
 
 main()
