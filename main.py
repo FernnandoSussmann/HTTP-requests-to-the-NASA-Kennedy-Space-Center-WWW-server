@@ -21,7 +21,7 @@ def data_frame_debug(df):
 
 def distinct_hosts(spark):
     query = """
-    SELECT DISTINCT Host
+    SELECT count(DISTINCT Host) as HostsQuantity
     FROM logs_table
     """
     return spark.sql(query)
@@ -60,7 +60,7 @@ def error_404_count_by_day(spark):
 
 def get_total_bytes(spark):
     query = """
-    SELECT sum(totalBytes)
+    SELECT sum(totalBytes) as TotalBytes
     FROM logs_table
     """
 
@@ -68,43 +68,53 @@ def get_total_bytes(spark):
 
 def main():
     from pandas import DataFrame
+
+    # Loading Spark Context and Session
     sc = SparkContext()
     spark = SparkSession(sc)
 
+    # Loading files
     log_aug95_RDD = load_file(sc,"access_log_Aug95")
     log_jul95_RDD = load_file(sc,"access_log_Jul95")
 
+    # Converting RDD to dataframe
     log_aug95_DF = organize_data_into_dataframe(log_aug95_RDD)
     log_jul95_DF = organize_data_into_dataframe(log_jul95_RDD)
 
     data_frame_debug(log_aug95_DF)
     data_frame_debug(log_jul95_DF)
 
+    # Unifying data in one dataframe and saving as temp table
     all_logs_df = log_aug95_DF.union(log_jul95_DF)
     all_logs_df.registerTempTable("logs_table")
 
     data_frame_debug(all_logs_df)
 
+    # Getting number of disinct hosts and saving it as csv
     unique_hosts_df = distinct_hosts(spark)
     unique_hosts_df.toPandas().to_csv('unique_hosts.csv')
 
     data_frame_debug(unique_hosts_df)
 
-    http_count_df = error_404_count(spark)
-    http_count_df.toPandas().to_csv('http_count.csv')
+    # Getting number of 404 errors and saving it as csv
+    error_404_count_df = error_404_count(spark)
+    error_404_count_df.toPandas().to_csv('error_404_count.csv')
 
-    data_frame_debug(http_count_df)
+    data_frame_debug(error_404_count_df)
 
-    http_count_top_url_df = error_404_count_top_url(spark)
-    http_count_top_url_df.toPandas().to_csv('http_count_top_url.csv')
+    # Getting top 5 URLs that showed 404 errors and saving it as csv
+    error_404_count_top_url_df = error_404_count_top_url(spark)
+    error_404_count_top_url_df.toPandas().to_csv('error_404_count_top_urls.csv')
 
-    data_frame_debug(http_count_top_url_df)
+    data_frame_debug(error_404_count_top_url_df)
 
-    http_count_by_day_df = error_404_count_by_day(spark)
-    http_count_by_day_df.toPandas().to_csv('http_count_by_day.csv')
+    # Getting number of 404 errors by day and saving it as csv
+    error_404_count_by_day_df = error_404_count_by_day(spark)
+    error_404_count_by_day_df.toPandas().to_csv('error_404_count_by_day.csv')
 
-    data_frame_debug(http_count_by_day_df)
+    data_frame_debug(error_404_count_by_day_df)
 
+    # Getting total of bytes and saving it as csv
     total_bytes_df = get_total_bytes(spark)
     total_bytes_df.toPandas().to_csv('total_bytes.csv')
 
