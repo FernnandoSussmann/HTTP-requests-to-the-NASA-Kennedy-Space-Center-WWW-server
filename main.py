@@ -67,6 +67,7 @@ def get_total_bytes(spark):
     return spark.sql(query)
 
 def main():
+    from pandas import DataFrame
     sc = SparkContext()
     spark = SparkSession(sc)
 
@@ -85,27 +86,27 @@ def main():
     data_frame_debug(all_logs_df)
 
     unique_hosts_df = distinct_hosts(spark)
-    unique_hosts_df.collect()
+    unique_hosts_df.toPandas().to_csv('unique_hosts.csv')
 
     data_frame_debug(unique_hosts_df)
 
     http_count_df = error_404_count(spark)
-    http_count_df.collect()
+    http_count_df.toPandas().to_csv('http_count.csv')
 
     data_frame_debug(http_count_df)
 
     http_count_top_url_df = error_404_count_top_url(spark)
-    http_count_top_url_df.collect()
+    http_count_top_url_df.toPandas().to_csv('http_count_top_url.csv')
 
     data_frame_debug(http_count_top_url_df)
 
-    http_count_by_host_df = error_404_count_by_day(spark)
-    http_count_by_host_df.collect()
+    http_count_by_day_df = error_404_count_by_day(spark)
+    http_count_by_day_df.toPandas().to_csv('http_count_by_day.csv')
 
-    data_frame_debug(http_count_by_host_df)
+    data_frame_debug(http_count_by_day_df)
 
     total_bytes_df = get_total_bytes(spark)
-    total_bytes_df.collect()
+    total_bytes_df.toPandas().to_csv('total_bytes.csv')
 
     data_frame_debug(total_bytes_df)    
 
