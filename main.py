@@ -35,7 +35,7 @@ def error_404_count(spark):
 
     return spark.sql(query)
 
-def error_404_count_by_host(spark):
+def error_404_count_top_url(spark):
     query = """
     SELECT concat(Host, Request) as URL,
            count(HTTPcode) as PagesNotFound
@@ -43,6 +43,17 @@ def error_404_count_by_host(spark):
     WHERE HTTPcode = '404'
     GROUP BY URL
     ORDER BY PagesNotFound DESC LIMIT 5
+    """
+
+    return spark.sql(query)
+
+def error_404_count_by_day(spark):
+    query = """
+    SELECT cast(timestamp as date) as Date,
+           count(HTTPcode) as PagesNotFound
+    FROM logs_table
+    WHERE HTTPcode = '404'
+    GROUP BY Date
     """
 
     return spark.sql(query)
@@ -77,7 +88,12 @@ def main():
 
     data_frame_debug(http_count_df)
 
-    http_count_by_host_df = error_404_count_by_host(spark)
+    http_count_top_url_df = error_404_count_top_url(spark)
+    http_count_top_url_df.collect()
+
+    data_frame_debug(http_count_by_host_df)
+
+    http_count_by_host_df = error_404_count_by_day(spark)
     http_count_by_host_df.collect()
 
     data_frame_debug(http_count_by_host_df)
