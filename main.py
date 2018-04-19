@@ -7,13 +7,28 @@ def load_file(sc,file_path):
 
 def organize_data_into_dataframe(data_rdd):
     from datetime import datetime
-    return data_rdd.map(lambda line: line.split(" ")) \
-            .map(lambda c: Row(host=c[0], 
-            timestamp=datetime.strptime(str(c[3]).replace('[',''), "%d/%b/%Y:%H:%M:%S"),
-            requestMethod=c[5].encode('utf-8').replace('"',''),
-            request=c[6].encode('utf-8').replace('"',''),
-            HTTPcode=c[-2], 
-            totalBytes=int(c[-1].encode('utf-8').replace('-', '0')))).toDF()
+    
+    invalid_data_list = [
+                        "Invalid_data",
+                        "-",
+                        "-",
+                        datetime.now().strftime("%d/%b/%Y:%H:%M:%S"),
+                        "-",
+                        "-",
+                        "-",
+                        "0"
+                        ]
+
+    final_df = data_rdd.map(lambda line: line.split(" ") if len(line.split(" ")) >= 8
+                                                         else invalid_data_list) \
+                       .map(lambda line: Row(host=line[0], 
+                       timestamp=datetime.strptime(str(line[3]).replace('[',''), "%d/%b/%Y:%H:%M:%S"),
+                       requestMethod=line[5].encode('utf-8').replace('"',''),
+                       request=line[6].encode('utf-8').replace('"',''),
+                       HTTPcode=line[-2], 
+                       totalBytes=int(line[-1].encode('utf-8').replace('-', '0')))).toDF()
+
+    return final_df
 
 def data_frame_debug(df):
     df.printSchema() 
@@ -84,9 +99,10 @@ def main():
     data_frame_debug(log_aug95_DF)
     data_frame_debug(log_jul95_DF)
 
-    # Unifying data in one dataframe and saving as temp table
+    # Unifying data in one dataframe
     all_logs_df = log_aug95_DF.union(log_jul95_DF)
-    all_logs_df.registerTempTable("logs_table")
+    # Cleaning invalid lines and registering valid data as temp table
+    all_logs_df.where("host != 'Invalid_data'").registerTempTable("logs_table")
 
     data_frame_debug(all_logs_df)
 
